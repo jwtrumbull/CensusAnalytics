@@ -11,6 +11,13 @@ import userInput
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import Normalizer
 import re
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+from scipy.interpolate import UnivariateSpline
+
+#Author: Ziwei Wu
+#example arguments:
+    # python test.py san_jose.xlsx
 
 def get_arguments():
     '''
@@ -83,10 +90,10 @@ def main():
     #print(headers['1960Census']['TOTALPOPULATION'])
 
     parameters = ['TOTALPOPULATION']
-    data = {'Years': [], 'Total Population': [], 'White': [], 'Black': [], 'Asian': [], 'Indian': [], 'Hispanic': [],
+    data = {'Years': [], 'Total Population': [], 'White': [], 'Black': [], 'Asian': [],'Chinese': [] ,'American Indian': [], 'Hispanic': [],
             'Male': [], 'Female': [], 'Under 5 years': [], '5 to 17 years': [],
             '18 to 64 years': [], '65 years and over': [], 'Median age': [], 'Persons per household': [],
-            'Total households': [], 'Employed': [], 'Median household income': []}
+            'Total households': [], 'Families': [],'Employed': [], 'Median household income': []}
     #print(headers.keys())
     inputyear = '2010'
     inputparam = 'Male'
@@ -112,12 +119,16 @@ def main():
                 if k == 'Foreign-bornwhite':
                     numofwhite = nativewhite + float(v)
                     data['White'].append(numofwhite)
-                if k == 'WHITEPERSONSOFSPANISH\nSURNAME' or k == 'PERSONSOFSPANISH\nORIGINORDESCENT' or k == 'SPANISHORIGIN' or k == 'TOTALHISPANIC' or k == 'HispanicorLatino(ofanyrace)':
+                if k=='Chinese':
+                    data['Chinese'].append(float(v))
+                if k == 'Negro' or k == 'Black' or k == 'BlackorAfricanAmerican':
+                    data['Black'].append(float(v))
+                if k == 'WHITEPERSONSOFSPANISHSURNAME' or k == 'PERSONSOFSPANISH\nORIGINORDESCENT' or k == 'SPANISHORIGIN' or k == 'TOTALHISPANIC' or k == 'HispanicorLatino(ofanyrace)':
                     data['Hispanic'].append(float(v))
-                if k == 'Asian':
+                if k == 'Asian' or k=='AsianandPacificIslander':
                     data['Asian'].append(float(v))
                 if k == 'Indian' or k == 'Indians' or k == 'AmericanIndian,Eskimo,andAleut' or k == 'AmericanIndian,Eskimo,or\nAleut' or k == 'AmericanIndianandAlaska\nNative':
-                    data['Indian'].append(float(v))
+                    data['American Indian'].append(float(v))
                 if k == 'Female':
                     data['Female'].append(float(v))
                 if k == 'Under5years':
@@ -134,6 +145,8 @@ def main():
                     data['Persons per household'].append(float(v))
                 if k == 'Totalhouseholds' or k == 'Households' or k == 'Totalhousehold' or k == 'Headofhousehold':
                     data['Total households'].append(float(v))
+                if k == 'Families' or k=='Totalfamilies' or k == 'Familyhouseholds':
+                    data['Families'].append(float(v))
                 if k == 'Employed' or k == 'Employedcivilianpopulation\n16yearsandover':
                     data['Employed'].append(float(v))
                 if k == 'Familiesmedianincomedollars' or k == 'Incomeoffamiliesandunrelated\nindividuals' or k == 'Medianhouseholdincome' or k == 'Medianhouseholdincome\n(dollars)':
@@ -190,34 +203,165 @@ def correlation(name_x, name_y, data_x, data_y):
     plt.scatter(data_x, data_y)
     plt.show()
 
-def regression_table(data_x, data_y):
-    """
-    :param data_x: A dataframe
-    :param data_y: A dataframe
-    :return: does not return anything
-    """
+def predict(y_frame, x_frame, year_int,a,b):
 
-    """
-    #lm = smf.ols("Female ~ Male", data=dataframe).fit()
-    xmin = min(data_x)
-    xmax = max(data_x)
-    X = np.linspace(xmin, xmax, 100)
-    X = sm.add_constant(X)
-    # params[0] is the intercept (beta0)
-    # params[1] is the slope (beta1)
-    #Y = lm.params[0] + lm.params[1] * X
-    sns.regplot(data_x, data_y)
-    plt.plot(X, Y, color="darkgreen")
-    plt.xlabel(name_x)
-    plt.ylabel(name_y)
-    plt.plot(data_x, data_y)
-    plt.show()
-    """
+    if year_int > 2010 or year_int < 1950:
+        # x = get_best_training_number(x_frame, y_frame)
+        #
+        # x_train = x_frame.drop(x_frame.index[x: len(x_frame.index)])
+        # #x_test = x_frame.drop(x_frame.index[0:x])
+        #
+        # y_train = y_frame.drop(y_frame.index[x: len(y_frame)])
+        # #y_test = y_frame.drop(y_frame.index[0:x])
+        #
+        # regr = LinearRegression()
+        # regr.fit(x_train, y_train)
+        #
+        # #y_reg = regr.predict(x_test)
+        #
+        # y_pred = regr.predict(year_int)
 
-    data_x = sm.add_constant(data_x)
-    model = sm.OLS(data_y,data_x).fit()
-    predictions = model.predict(data_x)
+        plt.scatter(x_frame, y_frame, color='black')
+
+
+        print("Predictions for the year " + str(year_int)+ " for " + str(list(y_frame)[0]) + " are: ")
+
+        # plt.scatter([year_int],[y_pred[0][0]] , color='blue')
+        # #trained and tested with year
+        # print("The prediction in blue is: " + str(y_pred[0][0]))
+
+        regr = LinearRegression()
+        regr.fit(x_frame,y_frame)
+        pred = regr.predict(year_int)
+
+        plt.scatter([year_int], [pred[0][0]], color='cyan')
+        #use all as training, because why not?
+        print("The prediction in cyan is: " + str(pred[0][0]))
+
+        if not a==b==-500:
+            #tnt = tested and trained
+            #tnt for predictors means i used the best training num method with predictors as y against years as x
+            #predictors = x-variables
+            #tnt for dependent means i used the best training num with predictors as x and dependent as y
+            #dependent = y-variable
+
+            #a = tnt for predictors, no tnt for dependent
+            plt.scatter([year_int], [a], color='green')
+            print("The prediction in green is: " + str(a))
+
+            #b = tnt for predictors, tnt for dependent
+            plt.scatter([year_int], [b], color='magenta')
+            print("The prediction in magenta is: " + str(b))
+
+        #plt.plot(x_test, y_reg, color='blue', linewidth=3)
+
+        plt.xlabel(list(x_frame)[0])
+        plt.ylabel(list(y_frame)[0])
+        plt.show()
+
+    else:
+       # print(y_frame)
+       s = UnivariateSpline(x_frame, y_frame)
+       print("Prediction for year " + str(int(year_int)) + " is " + str(s(year_int)))
+       xs = np.linspace(1950,2010,1000)
+       plt.plot(xs,s(xs),'g', lw=3)
+       plt.ylabel(list(y_frame)[0])
+       plt.xlabel(list(x_frame)[0])
+       plt.scatter([year_int], [s(year_int)], color='black')
+       plt.show()
+
+
+
+def regression_table(X,included, data_y):
+    """
+    :param X: dataframe for all predictors
+    :param included: list of predictors chosen by stepwise selection
+    :param data_y: dataframe of y
+    :return:
+    """
+    model = sm.OLS(data_y, sm.add_constant(pd.DataFrame(X[included]))).fit()
     print(model.summary())
+
+    for x in included:
+        d = X[x]
+        x_min = min(d)
+        x_max = max(d)
+        X1 = np.linspace(x_min, x_max, 100)
+        X1 = sm.add_constant(X1)
+        sns.regplot(d, data_y[list(data_y)[0]])
+        plt.xlabel(x)
+        name_y = list(data_y)[0]
+        plt.ylabel(name_y)
+        plt.plot(d, data_y)
+        plt.show()
+
+
+def train_and_test(x_frame, y_frame):
+    x = input("[M]anual or [A]utomatic?: ")
+    if x.lower() == 'a':
+        x = get_best_training_number(x_frame, y_frame)
+    else:
+        max_num = len(x_frame) - 2
+        x = input("How many data sets for training? (minimum: 2, maximum: " + str(max_num) + "): ")
+        x = int(x)
+
+    x_train = x_frame.drop(x_frame.index[x: len(x_frame.index)])
+    x_test = x_frame.drop(x_frame.index[0:x])
+
+    y_train = y_frame.drop(y_frame.index[x: len(y_frame)])
+    y_test = y_frame.drop(y_frame.index[0:x])
+
+    regr = LinearRegression()
+    regr.fit(x_train,y_train)
+
+    y_pred = regr.predict(x_test)
+
+    #print stuff
+    print("Number of Training Sets: " + str(x))
+    print("Coefficients: " + str(regr.coef_))
+    print("Intercepts: " + str(regr.intercept_))
+    error = mean_squared_error(y_test, y_pred)
+    print("Mean Squared Error: " + str(error))
+    score = r2_score(y_test, y_pred)
+    print("R-squared: " + str(score))
+
+    """
+    The actual data points are the black dots
+    The predictions using the training data is the blue line
+    The red points are where the predicted values are
+    """
+    for x in x_test:
+        x_test_temp = x_test[x]
+        x_train_temp = x_train[x]
+        plt.scatter(x_test_temp, y_test, color='black')
+        plt.scatter(x_train_temp,y_train,color = 'green')
+        prev_pred = regr.predict(x_frame)
+        plt.plot(x_frame[x], prev_pred, color = 'blue', linewidth =3)
+        plt.scatter(x_test_temp, y_pred, color='red')
+
+        plt.xlabel([x][0])
+        plt.ylabel(list(y_frame)[0])
+        plt.show()
+
+def get_r_squared(x_frame, y_frame, num_training):
+    x_train = x_frame.drop(x_frame.index[num_training: len(x_frame.index)])
+    x_test = x_frame.drop(x_frame.index[0:num_training])
+
+    y_train = y_frame.drop(y_frame.index[num_training: len(y_frame.index)])
+    y_test = y_frame.drop(y_frame.index[0:num_training])
+
+    regr = LinearRegression()
+    regr.fit(x_train, y_train)
+    y_pred = regr.predict(x_test)
+
+    return r2_score(y_test, y_pred)
+
+def get_best_training_number(x_frame, y_frame):
+    list_of_numbers = []
+    for x in range(2, len(x_frame) - 1):
+        list_of_numbers.append(x)
+    best_number = max(list_of_numbers, key=lambda p: get_r_squared(x_frame, y_frame, p))
+    return best_number
 
 def list_of_lists_to_dataframe(list,names):
     """
@@ -256,6 +400,19 @@ def normalize_data(dataframe):
     data = normal.transform(dataframe)
     data = pd.DataFrame(data, columns=list(dataframe))
     return data
+
+def vif_cal(x_vars):
+    xvar_names=x_vars.columns
+    vif_values = {}
+    for i in range(0,xvar_names.shape[0]):
+        y=x_vars[xvar_names[i]]
+        x=x_vars[xvar_names.drop(xvar_names[i])]
+        rsq=smf.ols(formula="y~x", data=x_vars).fit().rsquared
+        if(rsq!= 1): vif=round(1/(1-rsq),2)
+        else: vif = 500
+        vif_values[xvar_names[i]] = float(vif)
+        #print (xvar_names[i], " VIF = " , vif)
+    return vif_values
 
 def stepwise_selection(X, y,
                        initial_list=[],
